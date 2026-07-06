@@ -1,0 +1,43 @@
+﻿services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: inventariolegacy-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Reing2026$$Fuerte"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: inventariolegacy-db-init
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./Reinge-SistemaInventarioLegacy/setup_database.sql:/setup_database.sql:ro
+    entrypoint: >
+      /bin/bash -c "/opt/mssql-tools18/bin/sqlcmd
+      -S db,1433
+      -U sa
+      -P 'Reing2026$$Fuerte'
+      -C
+      -i /setup_database.sql"
+
+  app:
+    build: .
+    container_name: inventariolegacy-app
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      INVENTARIO_CONNECTION_STRING: "Server=db,1433;Database=InventarioLegacyDB;User Id=sa;Password=Reing2026$$Fuerte;TrustServerCertificate=True;Encrypt=False"
+    stdin_open: true
+    tty: true

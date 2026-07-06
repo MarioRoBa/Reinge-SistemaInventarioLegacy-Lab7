@@ -1,0 +1,48 @@
+name: CI Reingenieria
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test-sonar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restaurar proyecto principal
+        run: dotnet restore ./Reinge-SistemaInventarioLegacy/Reinge-SistemaInventarioLegacy.csproj
+
+      - name: Restaurar proyecto de tests
+        run: dotnet restore ./Reinge-SistemaInventarioLegacy.Tests/Reinge-SistemaInventarioLegacy.Tests.csproj
+
+      - name: Compilar proyecto principal
+        run: dotnet build ./Reinge-SistemaInventarioLegacy/Reinge-SistemaInventarioLegacy.csproj --no-restore -c Release
+
+      - name: Compilar proyecto de tests
+        run: dotnet build ./Reinge-SistemaInventarioLegacy.Tests/Reinge-SistemaInventarioLegacy.Tests.csproj --no-restore -c Release
+
+      - name: Ejecutar tests de caracterizacion
+        run: dotnet test ./Reinge-SistemaInventarioLegacy.Tests/Reinge-SistemaInventarioLegacy.Tests.csproj --no-build -c Release --logger trx
+
+      - name: Analisis SonarQube
+        if: ${{ secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+          dotnet sonarscanner begin /k:"inventario-legacy" /d:sonar.host.url="$SONAR_HOST_URL" /d:sonar.token="$SONAR_TOKEN"
+          dotnet build ./Reinge-SistemaInventarioLegacy/Reinge-SistemaInventarioLegacy.csproj -c Release
+          dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
