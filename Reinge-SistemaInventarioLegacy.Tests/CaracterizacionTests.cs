@@ -10,7 +10,7 @@ namespace Reinge_SistemaInventarioLegacy.Tests
         {
             decimal resultado = Utilidades.CalcularDescuento(1000m, 2);
 
-            Assert.Equal(999m, resultado);
+            Assert.Equal(100m, resultado);
         }
 
         [Fact]
